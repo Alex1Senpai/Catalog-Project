@@ -1,0 +1,39 @@
+[project]
+name = "catalog"
+version = "3.9.3"
+description = ""
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "ShiDari", email = "m2016S.T.M@gmail.com" }
+]
+dependencies = [
+  "flet",
+  "aiohttp",
+  "bcrypt",
+  "certifi",
+  "openpyxl",
+  "flet_permission_handler",
+  "pyjnius",
+]
+
+[tool.flet]
+org = "com.mycompany"
+product = "catalog"
+company = "Flet"
+copyright = "Copyright (C) 2025 by Flet"
+build_number = 1
+
+[tool.flet.app]
+path = "src"
+compile.app = true
+compile.packages = true
+compile.cleanup = true
+splash.android = false
+
+[tool.flet.android.permission]
+"android.permission.MANAGE_EXTERNAL_STORAGE" = true
+
+[tool.flet.android.feature]
+"android.hardware.storage" = true
+

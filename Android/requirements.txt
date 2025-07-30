@@ -1,0 +1,6 @@
+aiohttp
+bcrypt
+flet
+flet_desktop
+openpyxl
+pyjnius
