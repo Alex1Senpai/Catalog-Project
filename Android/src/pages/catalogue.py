@@ -1,6 +1,7 @@
 import flet as ft
 from plugins.card_styles import create_card
 from bdinit import get_categories
+from itertools import groupby
 
 def create_category_card(category, on_click_handler):
     return ft.Container(
@@ -19,21 +20,26 @@ def create_category_card(category, on_click_handler):
 def categories_page(page: ft.Page, on_category_click, tab: int):
     progress = ft.ProgressBar(visible=True)
     page.add(progress)
-    
+
     try:
         # Получаем только категории верхнего уровня для выбранной вкладки
         top_categories = get_categories(parent_id=None, tab=tab)
-        
+
         if not top_categories:
             return ft.Text("Нет категорий в этой вкладке")
-            
+
+        # Группируем категории по полю 'group'
+        grouped_categories = {k: list(v) for k, v in groupby(top_categories, key=lambda x: x.get('group') or 'Uncategorized')}
+
         # Создаем UI для каждой категории верхнего уровня
         category_columns = []
-        for category in top_categories:
-            # Создаем карточку категории
-            card = create_category_card(category, on_category_click)
-            category_columns.append(card)
-            
+        for group, categories in grouped_categories.items():
+            category_columns.append(ft.Text(group, size=20, weight=ft.FontWeight.BOLD))
+            for category in categories:
+                # Создаем карточку категории
+                card = create_category_card(category, on_category_click)
+                category_columns.append(card)
+
     finally:
         progress.visible = False
         page.update()

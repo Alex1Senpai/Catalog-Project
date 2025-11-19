@@ -13,7 +13,7 @@ def check_db_structure():
     """Проверяет и создает всю необходимую структуру БД"""
     conn = connect_db()
     cursor = conn.cursor()
-    
+
     try:
         # Создаем таблицы если их нет
         cursor.execute("""
@@ -27,7 +27,7 @@ def check_db_structure():
                 content_type TEXT DEFAULT 'default'
             )
         """)
-        
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS items (
                 id INTEGER PRIMARY KEY,
@@ -42,7 +42,7 @@ def check_db_structure():
                 FOREIGN KEY(category_id) REFERENCES categories(id)
             )
         """)
-        
+
         # Добавляем недостающие колонки
         cursor.execute("PRAGMA table_info(categories)")
         columns = [col[1] for col in cursor.fetchall()]
@@ -50,12 +50,16 @@ def check_db_structure():
             cursor.execute("ALTER TABLE categories ADD COLUMN parent_id INTEGER")
         if 'tab' not in columns:
             cursor.execute("ALTER TABLE categories ADD COLUMN tab INTEGER DEFAULT 0")
-        
+        if 'group' not in columns:
+            cursor.execute("ALTER TABLE categories ADD COLUMN `group` TEXT")
+        if 'position' not in columns:
+            cursor.execute("ALTER TABLE categories ADD COLUMN position INTEGER")
+
         cursor.execute("PRAGMA table_info(items)")
         columns = [col[1] for col in cursor.fetchall()]
         if 'mic' not in columns:
             cursor.execute("ALTER TABLE items ADD COLUMN mic INTEGER DEFAULT 0")
-        
+
         conn.commit()
     except sqlite3.Error as e:
         print(f"DB structure error: {e}")
@@ -69,35 +73,39 @@ check_db_structure()
 def get_categories(parent_id=None, tab=None):
     conn = connect_db()
     cursor = conn.cursor()
-    
+
     try:
         query = """
-            SELECT 
-                id, 
-                name, 
+            SELECT
+                id,
+                name,
                 parameter,
                 unit,
                 parent_id,
                 tab,
-                content_type
+                content_type,
+                `group`,
+                position
             FROM categories
             WHERE 1=1
         """
-        
+
         params = []
-        
+
         if parent_id is not None:
             query += " AND parent_id = ?"
             params.append(parent_id)
         else:
             query += " AND parent_id IS NULL"
-            
+
         if tab is not None:
             query += " AND tab = ?"
             params.append(tab)
-            
+
+        query += " ORDER BY `group`, position"
+
         cursor.execute(query, params)
-        
+
         return [
             {
                 'id': row[0],
@@ -106,7 +114,9 @@ def get_categories(parent_id=None, tab=None):
                 'unit': row[3],
                 'parent_id': row[4],
                 'tab': row[5],
-                'content_type': row[6] if len(row) > 6 else 'default'  # Добавляем content_type
+                'content_type': row[6] if len(row) > 6 else 'default',
+                'group': row[7],
+                'position': row[8]
             }
             for row in cursor.fetchall()
         ]
@@ -121,7 +131,7 @@ def get_items(category_id: int) -> list[dict]:
     """Получает все товары/услуги для указанной категории"""
     conn = connect_db()
     cursor = conn.cursor()
-    
+
     query = """
     WITH RECURSIVE subcategories AS (
         SELECT id FROM categories WHERE id = ?
@@ -129,14 +139,14 @@ def get_items(category_id: int) -> list[dict]:
         SELECT c.id FROM categories c
         INNER JOIN subcategories s ON c.parent_id = s.id
     )
-    SELECT 
-        i.id, 
-        i.name, 
+    SELECT
+        i.id,
+        i.name,
         i.category_id,
-        i.parameter_value, 
-        i.unit, 
-        i.cost_price, 
-        i.selling_price, 
+        i.parameter_value,
+        i.unit,
+        i.cost_price,
+        i.selling_price,
         i.image_id,
         i.mic,
         c.name as category_name,
@@ -145,9 +155,9 @@ def get_items(category_id: int) -> list[dict]:
     JOIN categories c ON i.category_id = c.id
     WHERE i.category_id IN (SELECT id FROM subcategories)
     """
-    
+
     params = [category_id]
-        
+
     try:
         cursor.execute(query, [category_id])
         items = []

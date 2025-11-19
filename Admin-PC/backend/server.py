@@ -75,6 +75,8 @@ class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
+    group = Column(String, index=True, nullable=True)
+    position = Column(Integer, index=True, nullable=True)
     parameter = Column(String, nullable=True)
     unit = Column(String)
     tab = Column(Integer)  # Оставляем tab
@@ -129,6 +131,8 @@ class UserResponse(UserBase):
 
 class CategoryBase(BaseModel):
     name: str
+    group: Optional[str] = None
+    position: Optional[int] = None
     unit: str
     tab: int
     parent_id: Optional[int] = None
@@ -492,7 +496,7 @@ def get_categories(
     categories = query.options(
         joinedload(Category.children),
         joinedload(Category.items)
-    ).all()
+    ).order_by(Category.group, Category.position).all()
     
     result = []
     for cat in categories:
